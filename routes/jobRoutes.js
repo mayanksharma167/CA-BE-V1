@@ -1,14 +1,10 @@
 const express = require("express");
-const {
-    getAllJobs,
-  
-} = require("../controllers/jobController");
+const { getAllJobs } = require("../controllers/jobController");
 const asyncWrapper = require("../middleware/asyncWrapper");
-const { auth } = require("../middleware/auth")
+const { auth } = require("../middleware/auth");
 
 const router = express.Router();
 
-router.get("/all-jobs",auth, asyncWrapper(getAllJobs));
-
+router.get("/all-jobs", asyncWrapper(getAllJobs));
 
 module.exports = router;
