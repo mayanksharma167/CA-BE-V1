@@ -186,3 +186,5 @@
 {"level":"error","message":"Error: Failed to fetch jobs: MongoServerSelectionError: Socket 'secureConnect' timed out after 30002ms (connectTimeoutMS: 30000)\n    at getAllJobs (/Users/mayanksharma/Documents/CA-BE-V1/CA-BE-V1/controllers/jobController.js:12:15)\n    at process.processTicksAndRejections (node:internal/process/task_queues:105:5)","timestamp":"2025-02-03T09:06:33.308Z"}
 {"level":"info","message":"Server running on port 3000","timestamp":"2025-02-05T14:28:18.829Z"}
 {"level":"info","message":"Server running on port 3000","timestamp":"2025-02-07T05:40:07.241Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2025-02-26T08:46:23.542Z"}
+{"level":"info","message":"Server running on port 3000","timestamp":"2025-02-26T08:56:25.189Z"}
