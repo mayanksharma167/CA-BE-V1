@@ -16,7 +16,16 @@ database.connect();
 
 // Middleware
 app.use(express.json());
-app.use(cors());
+
+// Configure CORS to allow only your frontend origin
+const corsOptions = {
+  origin: "https://www.codingarrow.com", // Replace with your frontend URL
+  methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Allow these HTTP methods
+  allowedHeaders: ["Content-Type", "Authorization"], // Allow these headers
+  credentials: true, // Allow cookies, authentication headers, etc., if needed
+};
+
+app.use(cors(corsOptions));
 
 // Routes
 app.use("/api/v1/jobs", jobRoutes);
@@ -24,7 +33,7 @@ app.use("/api/v1/auth", userRoutes);
 
 // Health Check
 app.get("/", (req, res) => {
-    return res.status(200).json({ success: true, message: "API is running" });
+  return res.status(200).json({ success: true, message: "API is running" });
 });
 
 // Global Error Handler
@@ -32,5 +41,5 @@ app.use(errorHandler);
 
 // Start Server
 app.listen(PORT, () => {
-    logger.info(`Server running on port ${PORT}`);
+  logger.info(`Server running on port ${PORT}`);
 });
