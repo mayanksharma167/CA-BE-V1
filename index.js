@@ -17,9 +17,24 @@ database.connect();
 // Middleware
 app.use(express.json());
 
-// Configure CORS to allow only your frontend origin
+// Configure CORS to allow requests from multiple origins (development and production)
+const allowedOrigins = [
+  "http://localhost:8000", // Your frontend development URL
+  "https://www.codingarrow.com", // Your production frontend URL
+];
+
 const corsOptions = {
-  origin: "https://www.codingarrow.com", // Replace with your frontend URL
+  origin: (origin, callback) => {
+    // Allow requests with no origin (e.g., mobile apps or curl requests)
+    if (!origin) return callback(null, true);
+
+    // Check if the request origin is in the allowedOrigins list
+    if (allowedOrigins.includes(origin)) {
+      callback(null, true);
+    } else {
+      callback(new Error("Not allowed by CORS"));
+    }
+  },
   methods: ["GET", "POST", "PUT", "DELETE", "OPTIONS"], // Allow these HTTP methods
   allowedHeaders: ["Content-Type", "Authorization"], // Allow these headers
   credentials: true, // Allow cookies, authentication headers, etc., if needed
