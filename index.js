@@ -6,6 +6,7 @@ const database = require("./config/database");
 const jobRoutes = require("./routes/jobRoutes");
 const errorHandler = require("./middleware/errorHandler");
 const userRoutes = require("./routes/User");
+const adminRoutes = require("./routes/Admin");
 
 dotenv.config();
 const app = express();
@@ -39,6 +40,7 @@ app.use(cors(corsOptions));
 
 app.use("/api/v1/jobs", jobRoutes);
 app.use("/api/v1/auth", userRoutes);
+app.use("/api/v1/admin", adminRoutes);
 
 app.get("/", (req, res) => {
   return res.status(200).json({ success: true, message: "API is running" });
