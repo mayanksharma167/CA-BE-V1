@@ -11,6 +11,7 @@ const getAllJobs = async (req, res) => {
     const skip = (page - 1) * limit;
     const jobTitle = req.query.jobtitle || '';
     const companyName = req.query.companyname || '';
+    const jobLocations = req.body.jobLocation ? req.body.jobLocation.split(',').map(loc => loc.trim()) : [];
 
     const searchQuery = {};
 
@@ -22,6 +23,11 @@ const getAllJobs = async (req, res) => {
       searchQuery.companyName = { $regex: companyName, $options: 'i' };
     }
 
+    if (jobLocations.length > 0) {
+      searchQuery.$or = jobLocations.map(location => ({
+        jobLocation: { $regex: location, $options: 'i' } 
+      }));
+    }
     const jobFetchPromises = [
       Job.find(searchQuery).sort({ createdAt: -1 }).skip(skip).limit(limit).exec(),
       Job.countDocuments(searchQuery),
@@ -68,4 +74,5 @@ const bootstrapApi = async (req) => {
   }
 };
 
-module.exports = { getAllJobs,bootstrapApi }; 
+
+module.exports = { getAllJobs }; 
