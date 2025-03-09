@@ -60,14 +60,22 @@ const bootstrapApi = async (req) => {
     const clientIp = requestIp.getClientIp(req);
     if (!clientIp) return;
 
-    const ipRecord = await IpTracker.findOne({ ipAddress: clientIp });
+    const today = new Date();
+    const dateString = today.toISOString().split("T")[0];
+
+    let ipRecord = await IpTracker.findOne({ ipAddress: clientIp, date: dateString });
 
     if (ipRecord) {
       ipRecord.requestCount += 1;
       ipRecord.lastRequest = Date.now();
       await ipRecord.save();
     } else {
-      await IpTracker.create({ ipAddress: clientIp, requestCount: 1, lastRequest: Date.now() });
+      await IpTracker.create({
+        ipAddress: clientIp,
+        requestCount: 1,
+        lastRequest: Date.now(),
+        date: dateString, 
+      });
     }
   } catch (error) {
     logger.error("Error in bootstrap API", { error });
