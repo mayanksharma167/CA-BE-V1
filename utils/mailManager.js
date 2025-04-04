@@ -18,86 +18,98 @@ console.log(
 const isDebugMode =
   process.env.DEBUG_EMAIL === "true" || process.env.NODE_ENV !== "production";
 
-// Create transporter object with improved settings for cloud environments
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT, 10), // Ensure port is a number
-  secure: process.env.SMTP_SECURE === "true",
-  auth: {
-    user: process.env.SMTP_USERNAME,
-    pass: process.env.SMTP_PASSWORD,
-  },
-  debug: isDebugMode, // Enable debug for troubleshooting
-  logger: isDebugMode, // Enable logger for troubleshooting
-  // Modified connection settings for Gmail compatibility
-  pool: false, // Disable pool for Gmail
-  maxConnections: 1, // Single connection for reliability
-  connectionTimeout: 30000, // 30 seconds
-  socketTimeout: 60000, // 60 seconds
-  // Gmail requires secure connection
-  tls: {
-    rejectUnauthorized: true,
-    minVersion: "TLSv1.2",
-  },
-  // Gmail-specific auth
-  authMethod: "LOGIN",
-});
+// Function to create and verify transporter wrapped in a Promise
+const initializeTransporter = () => {
+  return new Promise((resolve, reject) => {
+    // Create transporter object with improved settings for cloud environments
+    const transporter = nodemailer.createTransport({
+      host: process.env.SMTP_HOST,
+      port: parseInt(process.env.SMTP_PORT, 10), // Ensure port is a number
+      secure: process.env.SMTP_SECURE === "true",
+      auth: {
+        user: process.env.SMTP_USERNAME,
+        pass: process.env.SMTP_PASSWORD,
+      },
+      debug: isDebugMode, // Enable debug for troubleshooting
+      logger: isDebugMode, // Enable logger for troubleshooting
+      pool: false, // Disable pool for Gmail
+      maxConnections: 1, // Single connection for reliability
+      connectionTimeout: 30000, // 30 seconds
+      socketTimeout: 60000, // 60 seconds
+      tls: {
+        rejectUnauthorized: true,
+        minVersion: "TLSv1.2",
+      },
+      authMethod: "LOGIN",
+    });
 
-// Test the connection but don't block startup
-console.log("Testing SMTP connection...");
-transporter.verify(function (error, success) {
-  if (error) {
-    console.error("❌ SMTP CONNECTION ERROR:");
-    console.error("Error name:", error.name);
-    console.error("Error message:", error.message);
-    console.error("Error code:", error.code);
+    console.log("Testing SMTP connection...");
 
-    // Always log stack trace in this issue
-    console.error("Error stack:", error.stack);
+    // Verify the transporter
+    transporter.verify((error, success) => {
+      if (error) {
+        console.error("❌ SMTP CONNECTION ERROR:");
+        console.error("Error name:", error.name);
+        console.error("Error message:", error.message);
+        console.error("Error code:", error.code);
+        console.error("Error stack:", error.stack);
 
-    if (error.code === "EAUTH") {
-      console.error(
-        "⚠️ AUTHENTICATION FAILED: Check your username and password"
-      );
-      // Additional Gmail-specific recommendations
-      console.error(
-        "⚠️ For Gmail: Ensure 'Less secure app access' is enabled or use App Password"
-      );
-    } else if (error.code === "ESOCKET") {
-      console.error("⚠️ SOCKET ERROR: Check your host and port settings");
-    } else if (error.code === "ETIMEDOUT") {
-      console.error(
-        "⚠️ CONNECTION TIMEOUT: Check your firewall or network settings"
-      );
-    } else if (error.code === "ECONNECTION") {
-      console.error("⚠️ CONNECTION ERROR: Unable to connect to mail server");
-    } else if (error.code === "EDNS") {
-      console.error("⚠️ DNS ERROR: Cannot resolve hostname");
-    }
+        if (error.code === "EAUTH") {
+          console.error(
+            "⚠️ AUTHENTICATION FAILED: Check your username and password"
+          );
+          console.error(
+            "⚠️ For Gmail: Ensure 'Less secure app access' is enabled or use App Password"
+          );
+        } else if (error.code === "ESOCKET") {
+          console.error("⚠️ SOCKET ERROR: Check your host and port settings");
+        } else if (error.code === "ETIMEDOUT") {
+          console.error(
+            "⚠️ CONNECTION TIMEOUT: Check your firewall or network settings"
+          );
+        } else if (error.code === "ECONNECTION") {
+          console.error(
+            "⚠️ CONNECTION ERROR: Unable to connect to mail server"
+          );
+        } else if (error.code === "EDNS") {
+          console.error("⚠️ DNS ERROR: Cannot resolve hostname");
+        }
 
-    // Check environment variables
-    if (!process.env.SMTP_HOST) {
-      console.error("⚠️ SMTP_HOST is not defined in environment variables");
-    }
-    if (!process.env.SMTP_PORT) {
-      console.error("⚠️ SMTP_PORT is not defined in environment variables");
-    }
-    if (!process.env.SMTP_USERNAME) {
-      console.error("⚠️ SMTP_USERNAME is not defined in environment variables");
-    }
-    if (!process.env.SMTP_PASSWORD) {
-      console.error("⚠️ SMTP_PASSWORD is not defined in environment variables");
-    }
+        // Check environment variables
+        if (!process.env.SMTP_HOST) {
+          console.error("⚠️ SMTP_HOST is not defined in environment variables");
+        }
+        if (!process.env.SMTP_PORT) {
+          console.error("⚠️ SMTP_PORT is not defined in environment variables");
+        }
+        if (!process.env.SMTP_USERNAME) {
+          console.error(
+            "⚠️ SMTP_USERNAME is not defined in environment variables"
+          );
+        }
+        if (!process.env.SMTP_PASSWORD) {
+          console.error(
+            "⚠️ SMTP_PASSWORD is not defined in environment variables"
+          );
+        }
 
-    console.log(
-      "⚠️ Email system will attempt to send emails despite verification failure"
-    );
-  } else {
-    console.log(
-      "✅ SMTP CONNECTION SUCCESSFUL: Mail server is ready to send messages"
-    );
-  }
-});
+        console.log(
+          "⚠️ Email system will attempt to send emails despite verification failure"
+        );
+        // Resolve with transporter even on failure, as per your original logic
+        resolve(transporter);
+      } else {
+        console.log(
+          "✅ SMTP CONNECTION SUCCESSFUL: Mail server is ready to send messages"
+        );
+        resolve(transporter);
+      }
+    });
+  });
+};
+
+// Initialize transporter and export it as a promise
+const transporterPromise = initializeTransporter();
 
 /**
  * Send welcome email to new users after registration
@@ -106,10 +118,8 @@ transporter.verify(function (error, success) {
  * @returns {Promise} - Resolves with info about sent email
  */
 const sendWelcomeEmail = async (name, email) => {
-  // Always log email attempts with clear markers for easier log searching
   console.log(`[EMAIL_ATTEMPT] Preparing to send welcome email to ${email}...`);
 
-  // Add validation - always check inputs
   if (!name || !email) {
     console.error("[EMAIL_ERROR] Missing required parameters:", {
       name,
@@ -122,7 +132,6 @@ const sendWelcomeEmail = async (name, email) => {
     };
   }
 
-  // Validate email format
   const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
   if (!emailRegex.test(email)) {
     console.error("[EMAIL_ERROR] Invalid email format:", email);
@@ -135,7 +144,6 @@ const sendWelcomeEmail = async (name, email) => {
 
   const firstName = name.split(" ")[0];
 
-  // Always log these params for troubleshooting
   console.log("[EMAIL_PARAMS]", {
     recipient: email,
     name,
@@ -148,19 +156,19 @@ const sendWelcomeEmail = async (name, email) => {
   });
 
   try {
+    // Wait for the transporter to be initialized
+    const transporter = await transporterPromise;
+
     console.log("[EMAIL_PROGRESS] Generating email template...");
     const htmlContent = getWelcomeEmailTemplate(firstName);
     console.log("[EMAIL_PROGRESS] Email template generated successfully");
 
-    // Create a from address that's compatible with Gmail
     const fromAddress =
       process.env.MAIL_FROM_ADDRESS || process.env.SMTP_USERNAME;
     const fromName = process.env.MAIL_FROM_NAME || "Your Platform";
-
-    // Gmail may ignore the from name/address if it doesn't match the authenticated account
     const from = fromAddress.includes("@gmail.com")
-      ? fromAddress // Use only the email for Gmail
-      : `"${fromName}" <${fromAddress}>`; // Use formatted version for other providers
+      ? fromAddress
+      : `"${fromName}" <${fromAddress}>`;
 
     console.log(`[EMAIL_PROGRESS] Using from address: ${from}`);
     console.log("[EMAIL_PROGRESS] Sending email...");
@@ -170,9 +178,7 @@ const sendWelcomeEmail = async (name, email) => {
       to: email,
       subject: "Welcome to our platform!",
       html: htmlContent,
-      // Add text version as fallback
       text: `Welcome to our platform, ${firstName}! Thank you for joining our community. We're thrilled to have you on board!`,
-      // Reliability settings
       encoding: "utf-8",
       disableFileAccess: true,
       disableUrlAccess: true,
@@ -187,7 +193,6 @@ const sendWelcomeEmail = async (name, email) => {
       })
     );
 
-    // Set a longer timeout for cloud environments
     const sendPromise = transporter.sendMail(mailOptions);
     const timeoutPromise = new Promise((_, reject) =>
       setTimeout(
@@ -217,7 +222,6 @@ const sendWelcomeEmail = async (name, email) => {
     console.error("Error code:", error.code);
     console.error("Error stack:", error.stack);
 
-    // Common error diagnostics
     if (error.code === "EENVELOPE") {
       console.error(
         "[EMAIL_ERROR_DETAIL] ENVELOPE ERROR: Check your from/to addresses"
@@ -240,7 +244,6 @@ const sendWelcomeEmail = async (name, email) => {
       );
     }
 
-    // Return error info
     return {
       success: false,
       error: error.message,
@@ -258,7 +261,6 @@ const sendWelcomeEmail = async (name, email) => {
 const getWelcomeEmailTemplate = (firstName) => {
   console.log("[EMAIL_TEMPLATE] Creating template for:", firstName);
 
-  // Extremely simplified template for maximum compatibility
   return `
   <!DOCTYPE html>
 <html>
@@ -321,4 +323,5 @@ const getWelcomeEmailTemplate = (firstName) => {
 
 module.exports = {
   sendWelcomeEmail,
+  transporterPromise, // Export for testing or manual use if needed
 };
