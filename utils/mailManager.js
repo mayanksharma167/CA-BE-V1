@@ -18,97 +18,87 @@ console.log(
 const isDebugMode =
   process.env.DEBUG_EMAIL === "true" || process.env.NODE_ENV !== "production";
 
-// Function to create and verify transporter wrapped in a Promise
-const initializeTransporter = () => {
-  return new Promise((resolve, reject) => {
-    // Create transporter object with improved settings for cloud environments
-    const transporter = nodemailer.createTransport({
-      host: process.env.SMTP_HOST,
-      port: parseInt(process.env.SMTP_PORT, 10), // Ensure port is a number
-      secure: process.env.SMTP_SECURE === "true",
-      auth: {
-        user: process.env.SMTP_USERNAME,
-        pass: process.env.SMTP_PASSWORD,
-      },
-      debug: isDebugMode, // Enable debug for troubleshooting
-      logger: isDebugMode, // Enable logger for troubleshooting
-      pool: false, // Disable pool for Gmail
-      maxConnections: 1, // Single connection for reliability
-      connectionTimeout: 30000, // 30 seconds
-      socketTimeout: 60000, // 60 seconds
-      tls: {
-        rejectUnauthorized: true,
-        minVersion: "TLSv1.2",
-      },
-      authMethod: "LOGIN",
-    });
-
-    console.log("Testing SMTP connection...");
-
-    // Verify the transporter
-    transporter.verify((error, success) => {
-      if (error) {
-        console.error("❌ SMTP CONNECTION ERROR:");
-        console.error("Error name:", error.name);
-        console.error("Error message:", error.message);
-        console.error("Error code:", error.code);
-        console.error("Error stack:", error.stack);
-
-        if (error.code === "EAUTH") {
-          console.error(
-            "⚠️ AUTHENTICATION FAILED: Check your username and password"
-          );
-          console.error(
-            "⚠️ For Gmail: Ensure 'Less secure app access' is enabled or use App Password"
-          );
-        } else if (error.code === "ESOCKET") {
-          console.error("⚠️ SOCKET ERROR: Check your host and port settings");
-        } else if (error.code === "ETIMEDOUT") {
-          console.error(
-            "⚠️ CONNECTION TIMEOUT: Check your firewall or network settings"
-          );
-        } else if (error.code === "ECONNECTION") {
-          console.error(
-            "⚠️ CONNECTION ERROR: Unable to connect to mail server"
-          );
-        } else if (error.code === "EDNS") {
-          console.error("⚠️ DNS ERROR: Cannot resolve hostname");
-        }
-
-        // Check environment variables
-        if (!process.env.SMTP_HOST) {
-          console.error("⚠️ SMTP_HOST is not defined in environment variables");
-        }
-        if (!process.env.SMTP_PORT) {
-          console.error("⚠️ SMTP_PORT is not defined in environment variables");
-        }
-        if (!process.env.SMTP_USERNAME) {
-          console.error(
-            "⚠️ SMTP_USERNAME is not defined in environment variables"
-          );
-        }
-        if (!process.env.SMTP_PASSWORD) {
-          console.error(
-            "⚠️ SMTP_PASSWORD is not defined in environment variables"
-          );
-        }
-
-        console.log(
-          "⚠️ Email system will attempt to send emails despite verification failure"
-        );
-        // Resolve with transporter even on failure, as per your original logic
-        resolve(transporter);
-      } else {
-        console.log(
-          "✅ SMTP CONNECTION SUCCESSFUL: Mail server is ready to send messages"
-        );
-        resolve(transporter);
-      }
-    });
+// Async function to initialize and verify transporter
+const initializeTransporter = async () => {
+  // Create transporter object with improved settings for cloud environments
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT, 10), // Ensure port is a number
+    secure: process.env.SMTP_SECURE === "true",
+    auth: {
+      user: process.env.SMTP_USERNAME,
+      pass: process.env.SMTP_PASSWORD,
+    },
+    debug: isDebugMode, // Enable debug for troubleshooting
+    logger: isDebugMode, // Enable logger for troubleshooting
+    pool: false, // Disable pool for Gmail
+    maxConnections: 1, // Single connection for reliability
+    connectionTimeout: 30000, // 30 seconds
+    socketTimeout: 60000, // 60 seconds
+    tls: {
+      rejectUnauthorized: true,
+      minVersion: "TLSv1.2",
+    },
+    authMethod: "LOGIN",
   });
+
+  console.log("Testing SMTP connection...");
+
+  try {
+    await transporter.verify();
+    console.log(
+      "✅ SMTP CONNECTION SUCCESSFUL: Mail server is ready to send messages"
+    );
+    return transporter;
+  } catch (error) {
+    console.error("❌ SMTP CONNECTION ERROR:");
+    console.error("Error name:", error.name);
+    console.error("Error message:", error.message);
+    console.error("Error code:", error.code);
+    console.error("Error stack:", error.stack);
+
+    if (error.code === "EAUTH") {
+      console.error(
+        "⚠️ AUTHENTICATION FAILED: Check your username and password"
+      );
+      console.error(
+        "⚠️ For Gmail: Ensure 'Less secure app access' is enabled or use App Password"
+      );
+    } else if (error.code === "ESOCKET") {
+      console.error("⚠️ SOCKET ERROR: Check your host and port settings");
+    } else if (error.code === "ETIMEDOUT") {
+      console.error(
+        "⚠️ CONNECTION TIMEOUT: Check your firewall or network settings"
+      );
+    } else if (error.code === "ECONNECTION") {
+      console.error("⚠️ CONNECTION ERROR: Unable to connect to mail server");
+    } else if (error.code === "EDNS") {
+      console.error("⚠️ DNS ERROR: Cannot resolve hostname");
+    }
+
+    // Check environment variables
+    if (!process.env.SMTP_HOST) {
+      console.error("⚠️ SMTP_HOST is not defined in environment variables");
+    }
+    if (!process.env.SMTP_PORT) {
+      console.error("⚠️ SMTP_PORT is not defined in environment variables");
+    }
+    if (!process.env.SMTP_USERNAME) {
+      console.error("⚠️ SMTP_USERNAME is not defined in environment variables");
+    }
+    if (!process.env.SMTP_PASSWORD) {
+      console.error("⚠️ SMTP_PASSWORD is not defined in environment variables");
+    }
+
+    console.log(
+      "⚠️ Email system will attempt to send emails despite verification failure"
+    );
+    // Return transporter even on failure, as per your original logic
+    return transporter;
+  }
 };
 
-// Initialize transporter and export it as a promise
+// Initialize transporter and store the promise
 const transporterPromise = initializeTransporter();
 
 /**
